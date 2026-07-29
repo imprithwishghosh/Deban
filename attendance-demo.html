@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Office Attendance — Preview</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Bengali', 'Hind Siliguri', sans-serif;
+    background: #f3f4f6;
+    color: #111;
+    min-height: 100vh;
+  }
+  .phone {
+    max-width: 400px;
+    margin: 24px auto;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    min-height: 640px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+  }
+  .demo-banner {
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 12px;
+    padding: 8px 16px;
+    text-align: center;
+    font-weight: 600;
+  }
+  .screen { display: none; padding: 24px; }
+  .screen.active { display: block; }
+
+  h1 { font-size: 24px; font-weight: 700; margin: 24px 0 4px; text-align: center; }
+  .subtitle { text-align: center; color: #666; margin-bottom: 28px; font-size: 13px; }
+
+  input {
+    width: 100%;
+    padding: 13px 14px;
+    font-size: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 10px;
+  }
+  button {
+    width: 100%;
+    padding: 15px;
+    font-size: 15px;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  .btn-primary { background: #2563eb; color: #fff; }
+  .btn-checkin { background: #16a34a; color: #fff; }
+  .btn-checkout { background: #dc2626; color: #fff; }
+  .btn-link { background: none; color: #2563eb; font-weight: 600; padding: 10px; font-size: 14px; }
+  .btn-link.danger { color: #dc2626; }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .error { color: #dc2626; font-size: 13px; margin-bottom: 10px; min-height: 16px; }
+  .hint { color: #888; font-size: 12px; text-align: center; margin-top: 16px; }
+
+  .card { background: #f9fafb; border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; border: 1px solid #eee; }
+  .card-label { font-size: 12px; color: #666; }
+  .card-value { font-size: 16px; font-weight: 600; margin-top: 3px; }
+  .network-ok { color: #16a34a; }
+  .network-bad { color: #dc2626; }
+
+  .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+  .top-bar h2 { font-size: 20px; margin: 0; }
+
+  .toggle-row {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #f9fafb; border: 1px dashed #d1d5db; border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 18px;
+  }
+  .toggle-label { font-size: 12px; color: #666; line-height: 1.4; }
+  .switch { position: relative; width: 46px; height: 26px; flex-shrink: 0; margin-left: 12px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; cursor: pointer; inset: 0;
+    background: #dc2626; border-radius: 26px; transition: 0.2s;
+  }
+  .slider:before {
+    content: ""; position: absolute; height: 20px; width: 20px;
+    left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.2s;
+  }
+  input:checked + .slider { background: #16a34a; }
+  input:checked + .slider:before { transform: translateX(20px); }
+
+  .summary-row { display: flex; gap: 10px; margin-bottom: 18px; }
+  .summary-box { flex: 1; background: #f9fafb; border: 1px solid #eee; border-radius: 10px; padding: 14px; text-align: center; }
+  .summary-num { font-size: 24px; font-weight: 700; }
+  .summary-label { color: #666; font-size: 12px; margin-top: 2px; }
+
+  .day-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+  .status-present { color: #16a34a; font-weight: 600; }
+  .status-absent { color: #dc2626; font-weight: 600; }
+  .day-list { max-height: 260px; overflow-y: auto; }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="demo-banner">🔍 Interactive preview — not connected to a real server</div>
+
+  <!-- LOGIN -->
+  <div id="screen-login" class="screen active">
+    <h1>Talktiv Media</h1>
+    <p class="subtitle">Sign in to continue</p>
+    <div class="error" id="login-error"></div>
+    <input type="text" id="login-name" placeholder="Your name" />
+    <input type="email" id="login-email" placeholder="Email" />
+    <button class="btn-primary" onclick="handleLogin()">Log In</button>
+    <p class="hint">Demo mode: any name + email logs you in.</p>
+  </div>
+
+  <!-- HOME -->
+  <div id="screen-home" class="screen">
+    <div class="top-bar"><h2>Today</h2></div>
+
+    <div class="toggle-row">
+      <span class="toggle-label">Simulate: connected to<br/>office WiFi</span>
+      <label class="switch">
+        <input type="checkbox" id="wifi-toggle" checked onchange="renderHome()" />
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Network status</div>
+      <div class="card-value" id="network-status">✓ Connected to office network</div>
+    </div>
+
+    <div class="card">
+      <div class="card-value" id="home-checkin">Check-in: —</div>
+      <div class="card-value" id="home-checkout">Check-out: —</div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Hours worked this week</div>
+      <div class="card-value" id="home-week-hours" style="color:#2563eb;">0h 0m</div>
+    </div>
+
+    <div id="home-error" class="error"></div>
+
+    <button id="btn-checkin" class="btn-checkin" onclick="handleCheckIn()">Check In</button>
+    <button id="btn-checkout" class="btn-checkout" onclick="handleCheckOut()" style="display:none;">Check Out</button>
+
+    <button class="btn-link" onclick="showHistory()">View Attendance History</button>
+    <button class="btn-link danger" onclick="handleLogout()">Log Out</button>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="screen-history" class="screen">
+    <div class="top-bar">
+      <h2>This Month</h2>
+      <button class="btn-link" style="width:auto;margin:0;" onclick="showHome()">Back</button>
+    </div>
+    <div class="summary-row">
+      <div class="summary-box">
+        <div class="summary-num" style="color:#16a34a;" id="hist-present">0</div>
+        <div class="summary-label">Present</div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-num" style="color:#dc2626;" id="hist-absent">0</div>
+        <div class="summary-label">Absent</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px;">
+      <div class="card-label">Total hours worked this week</div>
+      <div class="card-value" id="hist-week-hours" style="font-size:20px;color:#2563eb;">0h 0m</div>
+    </div>
+    <div class="day-list" id="hist-days"></div>
+  </div>
+</div>
+
+<script>
+let currentUser = null; // { name, email }
+let records = {}; // date -> { check_in, check_out }
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+async function loadRecords() {
+  try {
+    const key = 'attendance-demo:' + currentUser.email;
+    const result = await window.storage.get(key, false);
+    records = result ? JSON.parse(result.value) : {};
+  } catch (e) {
+    records = {};
+  }
+}
+
+async function saveRecords() {
+  const key = 'attendance-demo:' + currentUser.email;
+  try {
+    await window.storage.set(key, JSON.stringify(records), false);
+  } catch (e) {
+    console.error('Storage error', e);
+  }
+}
+
+async function handleLogin() {
+  const name = document.getElementById('login-name').value.trim();
+  const email = document.getElementById('login-email').value.trim();
+  const errorEl = document.getElementById('login-error');
+  errorEl.textContent = '';
+
+  if (!name || !email) {
+    errorEl.textContent = 'Please enter your name and email';
+    return;
+  }
+
+  currentUser = { name, email };
+  await loadRecords();
+  showHome();
+}
+
+function handleLogout() {
+  currentUser = null;
+  records = {};
+  showScreen('screen-login');
+}
+
+function isOnOfficeWifi() {
+  return document.getElementById('wifi-toggle').checked;
+}
+
+function renderHome() {
+  const onWifi = isOnOfficeWifi();
+  const statusEl = document.getElementById('network-status');
+  statusEl.textContent = onWifi ? '✓ Connected to office network' : '✕ Not on office network';
+  statusEl.className = 'card-value ' + (onWifi ? 'network-ok' : 'network-bad');
+
+  const today = records[todayStr()];
+  document.getElementById('home-checkin').textContent =
+    'Check-in: ' + (today && today.check_in ? new Date(today.check_in).toLocaleTimeString() : '—');
+  document.getElementById('home-checkout').textContent =
+    'Check-out: ' + (today && today.check_out ? new Date(today.check_out).toLocaleTimeString() : '—');
+  document.getElementById('home-week-hours').textContent = formatHoursMinutes(calculateWeeklyHours());
+
+  const isCheckedIn = today && today.check_in && !today.check_out;
+  const checkinBtn = document.getElementById('btn-checkin');
+  const checkoutBtn = document.getElementById('btn-checkout');
+
+  checkinBtn.style.display = isCheckedIn ? 'none' : 'block';
+  checkoutBtn.style.display = isCheckedIn ? 'block' : 'none';
+
+  checkinBtn.disabled = !onWifi || (today && today.check_in);
+  checkoutBtn.disabled = !onWifi;
+
+  document.getElementById('home-error').textContent = '';
+}
+
+function showHome() {
+  showScreen('screen-home');
+  renderHome();
+}
+
+async function handleCheckIn() {
+  const errorEl = document.getElementById('home-error');
+  if (!isOnOfficeWifi()) {
+    errorEl.textContent = 'You must be connected to the office WiFi to check in';
+    return;
+  }
+  const date = todayStr();
+  if (records[date] && records[date].check_in) {
+    errorEl.textContent = 'You are already checked in today';
+    return;
+  }
+  records[date] = { check_in: new Date().toISOString(), check_out: null };
+  await saveRecords();
+  renderHome();
+}
+
+async function handleCheckOut() {
+  const errorEl = document.getElementById('home-error');
+  if (!isOnOfficeWifi()) {
+    errorEl.textContent = 'You must be connected to the office WiFi to check out';
+    return;
+  }
+  const date = todayStr();
+  if (!records[date] || !records[date].check_in) {
+    errorEl.textContent = 'No active check-in found for today';
+    return;
+  }
+  records[date].check_out = new Date().toISOString();
+  await saveRecords();
+  renderHome();
+}
+
+function showHistory() {
+  showScreen('screen-history');
+  renderHistory();
+}
+
+function getWeekRange() {
+  const now = new Date();
+  const day = now.getDay(); // 0 = Sunday
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diffToMonday);
+  monday.setHours(0, 0, 0, 0);
+
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23, 59, 59, 999);
+
+  return { monday, sunday };
+}
+
+function formatHoursMinutes(totalMinutes) {
+  const h = Math.floor(totalMinutes / 60);
+  const m = Math.round(totalMinutes % 60);
+  return `${h}h ${m}m`;
+}
+
+function calculateWeeklyHours() {
+  const { monday, sunday } = getWeekRange();
+  let totalMinutes = 0;
+
+  for (const dateStr in records) {
+    const rec = records[dateStr];
+    if (!rec.check_in || !rec.check_out) continue;
+
+    const checkInDate = new Date(rec.check_in);
+    if (checkInDate < monday || checkInDate > sunday) continue;
+
+    const minutes = (new Date(rec.check_out) - checkInDate) / 60000;
+    totalMinutes += minutes;
+  }
+
+  return totalMinutes;
+}
+
+function renderHistory() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth(); // 0-indexed
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+
+  let present = 0;
+  let rows = '';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${prefix}-${String(d).padStart(2, '0')}`;
+    const isPresent = !!(records[dateStr] && records[dateStr].check_in);
+    if (isPresent) present++;
+    rows += `
+      <div class="day-row">
+        <span>${dateStr}</span>
+        <span class="${isPresent ? 'status-present' : 'status-absent'}">
+          ${isPresent ? 'Present' : 'Absent'}
+        </span>
+      </div>
+    `;
+  }
+
+  document.getElementById('hist-present').textContent = present;
+  document.getElementById('hist-absent').textContent = daysInMonth - present;
+  document.getElementById('hist-week-hours').textContent = formatHoursMinutes(calculateWeeklyHours());
+  document.getElementById('hist-days').innerHTML = rows;
+}
+</script>
+</body>
+</html>
